@@ -3,12 +3,10 @@
 import zipfile
 import tempfile
 import os
-#import shutil
-import xml.etree.ElementTree as ET
 from lxml import etree
-
 import re 
 import argparse
+
 def lxml_replace_code_blocks_in_file(input_file, output_file):
     # Define namespaces
     ns = {
@@ -29,54 +27,17 @@ def lxml_replace_code_blocks_in_file(input_file, output_file):
             # Find the w:t elements
             p_t = p.find('.//w:t', namespaces=ns)
             if (p_t is not None):
-                print("--")
-                print(etree.tostring(p_t, pretty_print=True, encoding='unicode'))
+                #print("--")
+                #print(etree.tostring(p_t, pretty_print=True, encoding='unicode'))
                 p_t.text = etree.CDATA("% Your code here.       ")
             
     # Write the modified XML back to a file
-    # Using xml_declaration=True to include the XML declaration in the output file
     for of in [output_file, './tmp.xml']:
         with open(of, 'wb') as f:
             #f.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
             f.write(etree.tostring(root, pretty_print=False, xml_declaration=False, encoding='UTF-8'))
     
-
-# def replace_code_blocks_in_file(input_file, output_file):
-#     # Define namespaces
-#     ns = {
-#         'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
-#         'mc': 'http://schemas.openxmlformats.org/markup-compatibility/2006'
-#     }
-
-#     # Parse the XML file
-#     tree = ET.parse(input_file)
-#     root = tree.getroot()
-
-#     # Iterate through all <w:p> elements in the document
-#     for p in root.findall('.//w:p', ns):
-#         # Check if <w:p> has a style <w:pStyle> with value "code"
-#         p_style = p.find('.//w:pPr/w:pStyle', ns)
-#         if p_style is not None and p_style.attrib.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val') == 'code':
-#             # Check if it's inside mc:AlternateContent and skip those
-#             if p.find('.//mc:AlternateContent', ns) is not None:
-#                 continue
-
-#             # Find the <w:t> element that contains the CDATA
-#             t_element = p.find('.//w:r/w:t', ns)
-#             if t_element is not None:
-#                 # Check if the CDATA block contains specific code to replace
-#                 if t_element.text and ('x = 1' in t_element.text or '% Remove' in t_element.text):
-#                     # Replace CDATA content with the new text
-#                     t_element.text = '% Your code here'
-
-#     # Write the modified XML back to a file
-#     tree.write(output_file, encoding='utf-8', xml_declaration=True)
-
-
 def process_mlx_file(input_filename, output_filename):
-    tmp_dir = tempfile.TemporaryDirectory()
-    # Perform operations in the directory
-    tmp_dir.cleanup()  # Manually remove the direc
     # Step 1: Expand the zip archive into a temporary directory
     with tempfile.TemporaryDirectory() as temp_dir:
         with zipfile.ZipFile(input_filename, 'r') as zip_ref:
@@ -102,13 +63,6 @@ def process_mlx_file(input_filename, output_filename):
                     arcname = os.path.relpath(file_path, temp_dir)
                     zipf.write(file_path, arcname)
 
-        print("Clean up temp dir")
-        # Perform operations in the directory
-        #temp_dir.cleanup()  # Manually remove the direc
-
-    tmp_dir = tempfile.TemporaryDirectory()
-    # Perform operations in the directory
-    tmp_dir.cleanup()  # Manually remove the direc
 
 def modify_filename(file_name):
     """
@@ -160,8 +114,9 @@ Description:
   4. Saves the modified XML file.
   5. Recompresses all files in the temporary directory into a new MLX file.
 
-  If no output file is specified, the script will create a new file with '_assign' 
-  appended to the original filename (before the extension).
+  If no output file is specified, and the input file includes contains '_soln', 
+  then the output file defaults to the input file name with the '_soln' substring removed. 
+  If '_soln' is not found in the input file name, then '_nocode' is appended to the base name.
         """,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -176,7 +131,7 @@ Description:
         output_file = modify_filename(input_file)
 
     process_mlx_file(input_file, output_file)
-    print(f"Processed {input_file} and created {output_file}")
+    print(f"Processed <{input_file}>, removed contents of code blocks and wrote to <{output_file}>.")
 
 if __name__ == "__main__":
     main()
